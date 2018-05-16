@@ -9,7 +9,7 @@ scope ="BASE API";
 
 [DataSource.Kind="Braincube", Publish="Braincube.Publish"]
 //Function executed as a main, called after the authentification
-//Call the GetBraincube after displaying the date picker to cohoose parameters
+//Call the GetBraincube after displaying the date picker to choose parameters
 shared Braincube.Contents = Value.ReplaceType(GetBraincubes, BraincubeSelector);
 
 /*********************************************************************************************************
@@ -68,7 +68,13 @@ GetBraincubes = (begin as date, end as date) as table =>
 //Return a Navigation Table with all the memoryBases available for the selected braincube
 GetMemoryBases = (braincubeName as text, begin as date, end as date) as table => 
     let 
-        sso = GetSSOSession(),
+        //retrieve a SSO token to access REST API
+        ssosession = Web.Contents(token_uri, [
+            Headers = [
+                #"Authorization" = "Bearer " & Extension.CurrentCredential()[access_token]
+            ]]
+        ),
+        sso = Json.Document(ssosession),
         //Call the REST API to retrieve MB infos for the selected braincube
         mb = Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/all/selector", [
             Headers = [
@@ -85,7 +91,7 @@ GetMemoryBases = (braincubeName as text, begin as date, end as date) as table =>
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
                         Name=memoryBases{[i]}[name] & " - " & Text.From(memoryBases{[i]}[numberOfVariables]) & " variables",
                         Key=  memoryBases{[i]}[bcId],
-                        Data= GetVariables(memoryBases{[i]}[bcId], braincubeName, begin, end),
+                        Data= GetVariables(memoryBases{[i]}[bcId], braincubeName, begin, end, sso),
                         ItemKind= "Database",
                         ItemName= "Database",
                         IsLeaf= false]}
@@ -100,9 +106,8 @@ GetMemoryBases = (braincubeName as text, begin as date, end as date) as table =>
        NavTable;
 
 //Return the variables availables for the selected memorybase
-GetVariables = (mbId as number, braincubeName as text, begin as date, end as date) as table =>
+GetVariables = (mbId as number, braincubeName as text, begin as date, end as date, sso as record) as table =>
     let 
-        sso = GetSSOSession(),
         //Call the REST API to retrieve usefull infos about the MB
         ref = Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/simple", [
             Headers = [
@@ -144,7 +149,7 @@ GetVariables = (mbId as number, braincubeName as text, begin as date, end as dat
                 tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                     Name=variables{[i]}[local],
                     Key=variables{[i]}[id],
-                    Data= GetVariableContent(variables{[i]}[local], braincubeName, mbId, variables{[i]}[id], reference, begin, end, orderTab),
+                    Data= GetVariableContent(variables{[i]}[local], braincubeName, mbId, variables{[i]}[id], reference, begin, end, orderTab, sso),
                     ItemKind= "Record",
                     ItemName= "Record",
                     IsLeaf= true]}
@@ -170,10 +175,10 @@ shared GetVariableContent = (
     ref, 
     begin as date, 
     end as date,
-    orderTab as table
+    orderTab as table,
+    sso as record
 ) as table =>
     let
-        sso = GetSSOSession(),
         //Formats the data requested by the API to provide the response
         content= Json.FromValue(
             [order= ref[referenceDate], 
@@ -243,17 +248,6 @@ FinishLogin = (context, callbackUri, state) =>
 /**********************************************************************************************************************
                                                     UTILS
 **********************************************************************************************************************/
-//SSOToken can't be store anywere => function to make it easily accessible
-GetSSOSession = () =>
-    let
-        ssosession = Web.Contents(token_uri, [
-            Headers = [
-                #"Authorization" = "Bearer" & Extension.CurrentCredential()[access_token]
-            ]]
-        )
-    in
-        Json.Document(ssosession);
-
 //Function to display the Navigation Tables graphically
 Table.ToNavigationTable = (
     table as table,
@@ -280,7 +274,7 @@ Table.ToNavigationTable = (
 
 Braincube.Publish = [
     Beta = true,
-    Category = "Other",
+    Category = "online services",
     ButtonText = { Extension.LoadString("ButtonTitle"), Extension.LoadString("ButtonHelp") },
     LearnMoreUrl = "https://powerbi.microsoft.com/",
     SourceImage = Braincube.Icons,
