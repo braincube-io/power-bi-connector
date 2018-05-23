@@ -115,25 +115,6 @@ GetVariables = (mbId as number, braincubeName as text, begin as date, end as dat
             ]]
         ), 
         reference = Json.Document(ref),
-        //Formats the data requested by the API to provide the response
-        content= Json.FromValue(
-            [order= reference[referenceDate], 
-                definitions= {reference[referenceDate]} , 
-                context=[
-                    dataSource = "mb" & Text.From(mbId), 
-                    filter=[BETWEEN={reference[order], Date.ToText(begin, "yyyyMMdd_hhmmss"), Date.ToText(end, "yyyyMMdd_hhmmss")}]]
-            ] 
-        ),
-        //Call the REST API to get the order variable of the MB
-        order=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) &"/LF", [ 
-            Headers = [
-                #"Accept" = "application/json",
-                #"IPLSSOTOKEN" = sso[token],
-                #"Content-Type" = "application/json"
-            ],
-            Content = content]
-        ), 
-        orderTab=Table.FromList(Json.Document(order)[datadefs]{0}[data], null, {"_Order"}),
         //Call the REST API to retrieve name of the variables for the selected MB
         var=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/" & Text.From(mbId) &"/variables/selector", [
             Headers = [
@@ -149,7 +130,7 @@ GetVariables = (mbId as number, braincubeName as text, begin as date, end as dat
                 tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                     Name=variables{[i]}[local],
                     Key=variables{[i]}[id],
-                    Data= GetVariableContent(variables{[i]}[local], braincubeName, mbId, variables{[i]}[id], reference, begin, end, orderTab, sso),
+                    Data= GetVariableContent(variables{[i]}[local], braincubeName, mbId, variables{[i]}[id], reference, begin, end, sso),
                     ItemKind= "Record",
                     ItemName= "Record",
                     IsLeaf= true]}
@@ -175,7 +156,6 @@ shared GetVariableContent = (
     ref, 
     begin as date, 
     end as date,
-    orderTab as table,
     sso as record
 ) as table =>
     let
@@ -199,7 +179,8 @@ shared GetVariableContent = (
         ), 
         variables = Json.Document(var),
         //Formats the values to return a table usable by PowerBI
-        values = Table.AddColumn(orderTab, varName, each variables[datadefs]{1}[data]{List.PositionOf(variables[datadefs]{0}[data], [_Order])}),
+        tab = Table.FromList(variables[datadefs]{0}[data], null, {"_Order"}),
+        values = Table.AddColumn(tab, varName, each variables[datadefs]{1}[data]{List.PositionOf(variables[datadefs]{0}[data], [_Order])}),
         formatTab = Table.ReplaceValue(values, "?", "No value", Text.Replace, {"_Order", varName}),
         result = Table.AddIndexColumn(formatTab, "_Index", 0,1)
     in
