@@ -11,6 +11,7 @@ scope ="BASE API";
 //Function executed as a main, called after the authentification
 //Call the GetBraincube after displaying the date picker to choose parameters
 shared Braincube.Contents = Value.ReplaceType(GetBraincubes, BraincubeSelector);
+//shared Braincube.Contents = () => GetBraincubes(#date(2015, 2, 12), #date(2018, 2, 10));
 
 /*********************************************************************************************************
                                                DATE PICKER
@@ -35,23 +36,23 @@ BraincubeSelector = type function (
 //Return a Navigation Table with all the braincubes availablesfor this client, without the MX
 GetBraincubes = (begin as date, end as date) as table => 
     let
-        //Call the REST API to retrieve the braincubes
-        source = Web.Contents(info_uri, [
+        //retrieve a SSO token to access REST API
+        ssosession = Web.Contents(token_uri, [
             Headers = [
-                #"Authorization" = "Bearer" & Extension.CurrentCredential()[access_token]
+                #"Authorization" = "Bearer " & Extension.CurrentCredential()[access_token]
             ]]
         ),
-        data = Json.Document(source)[allowedProducts],
+        sso = Json.Document(ssosession),
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
                 () => [i=0, tab=#table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, {})],
-                each [i] <= List.Count(data),
+                each [i] <= List.Count(sso[accessList]),
                 each [
-                    tab = if(Text.Contains(data{[i]}[name], "MX_") <> true) then
+                    tab = if(Text.Contains(sso[accessList]{[i]}[product][type], "braincube") <> false) then
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
-                        Name=data{[i]}[name],
-                        Key= data{[i]}[id],
-                        Data= GetMemoryBases(data{[i]}[name], begin, end),
+                        Name=sso[accessList]{[i]}[product][name],
+                        Key= sso[accessList]{[i]}[product][productId],
+                        Data= GetMemoryBases(sso[accessList]{[i]}[product][name], begin, end, sso),
                         ItemKind= "Cube",
                         ItemName= "Cube",
                         IsLeaf= false]}
@@ -66,15 +67,8 @@ GetBraincubes = (begin as date, end as date) as table =>
             NavTable;
 
 //Return a Navigation Table with all the memoryBases available for the selected braincube
-GetMemoryBases = (braincubeName as text, begin as date, end as date) as table => 
+GetMemoryBases = (braincubeName as text, begin as date, end as date, sso as record) as table => 
     let 
-        //retrieve a SSO token to access REST API
-        ssosession = Web.Contents(token_uri, [
-            Headers = [
-                #"Authorization" = "Bearer " & Extension.CurrentCredential()[access_token]
-            ]]
-        ),
-        sso = Json.Document(ssosession),
         //Call the REST API to retrieve MB infos for the selected braincube
         mb = Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/all/selector", [
             Headers = [
