@@ -8,13 +8,13 @@ that provides insights throughout your organization.
 
 ## The connector
 
-###Get your connector
+### Get your connector
 
 You can get your connector here
 
 --------
 
-###How to use it?
+### How to use it?
 
 * **Step 1**
 
