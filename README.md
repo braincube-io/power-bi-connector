@@ -8,9 +8,13 @@ that provides insights throughout your organization.
 
 ## The connector
 
-### Get your connector
+### Install the connector
 
-You can get your connector here
+You can get your connector [here](https://github.com/braincube-io/power-bi-connector/raw/master/Braincube/bin/Debug/Braincube.mez).
+
+Install this file into your `Documents\Power BI Desktop\Custom Connectors` folder.
+
+You might have to enable the "Uncertified connectors" in the Security Options of Power BI.
 
 --------
 
