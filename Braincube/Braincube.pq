@@ -1,15 +1,11 @@
 ﻿section Braincube;
 
-client_id = "83f2c2f0-319f-381f-b7e3-8e74e8469e22"; 
-redirect_uri = "https://oauth.powerbi.com/views/oauthredirect.html";
-info_uri = "https://mybraincube.com/sso-server/ws/oauth2/me";
-token_uri="https://mybraincube.com/sso-server/rest/session/openWithToken";
-authorize_uri="https://mybraincube.com/sso-server/vendors/braincube/authorize.jsp";
-scope ="BASE API";
+/********************** APIKEY AUTH CONSTANTS *************************/
+me_uri = "https://mybraincube.com/sso-server/ws/user/me";
 
-[DataSource.Kind="Braincube", Publish="Braincube.Publish"]
 //Function executed as a main, called after the authentification
 //Call the GetBraincube after displaying the date picker to choose parameters
+[DataSource.Kind="Braincube", Publish="Braincube.Publish"]
 shared Braincube.Contents = Value.ReplaceType(GetBraincubes, BraincubeSelector);
 //shared Braincube.Contents = () => GetBraincubes(#date(2015, 2, 12), #date(2018, 2, 10));
 
@@ -34,14 +30,10 @@ BraincubeSelector = type function (
                                             DATA SELECTION
 ***********************************************************************************************************/
 //Return a Navigation Table with all the braincubes availablesfor this client, without the MX
-GetBraincubes = (begin as date, end as date) as table => 
+GetBraincubes = (begin as date, end as date) as table =>
     let
-        //retrieve a SSO token to access REST API
-        ssosession = Web.Contents(token_uri, [
-            Headers = [
-                #"Authorization" = "Bearer " & Extension.CurrentCredential()[access_token]
-            ]]
-        ),
+        //retrieve a session with the API Key
+        ssosession = Braincube.authenticatedGet(me_uri),
         sso = Json.Document(ssosession),
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
@@ -67,21 +59,17 @@ GetBraincubes = (begin as date, end as date) as table =>
             NavTable;
 
 //Return a Navigation Table with all the memoryBases available for the selected braincube
-GetMemoryBases = (braincubeName as text, begin as date, end as date, sso as record) as table => 
-    let 
+GetMemoryBases = (braincubeName as text, begin as date, end as date, sso as record) as table =>
+    let
         //Call the REST API to retrieve MB infos for the selected braincube
-        mb = Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/all/selector", [
-            Headers = [
-                #"IPLSSOTOKEN" = sso[token]
-            ]]
-        ), 
+        mb = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/all/selector"),
         memoryBases = Json.Document(mb)[items],
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
             () => [i=0, tab=#table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, {})],
             each [i] < List.Count(memoryBases),
             each [
-                tab = if(memoryBases{[i]}[quickStudy] <> true) then 
+                tab = if(memoryBases{[i]}[quickStudy] <> true) then
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
                         Name=memoryBases{[i]}[name] & " - " & Text.From(memoryBases{[i]}[numberOfVariables]) & " variables",
                         Key=  memoryBases{[i]}[bcId],
@@ -92,7 +80,7 @@ GetMemoryBases = (braincubeName as text, begin as date, end as date, sso as reco
                     )
                     else
                     Table.InsertRows([tab], Table.RowCount([tab]), {}),
-                i=[i]+1 
+                i=[i]+1
             ]
         ),
         NavTable = Table.ToNavigationTable(DataTable{List.Count(DataTable)-1}[tab], {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
@@ -101,20 +89,12 @@ GetMemoryBases = (braincubeName as text, begin as date, end as date, sso as reco
 
 //Return the variables availables for the selected memorybase
 GetVariables = (mbId as number, braincubeName as text, begin as date, end as date, sso as record) as table =>
-    let 
+    let
         //Call the REST API to retrieve usefull infos about the MB
-        ref = Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/simple", [
-            Headers = [
-                #"IPLSSOTOKEN" = sso[token]
-            ]]
-        ), 
+        ref = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/simple"),
         reference = Json.Document(ref),
         //Call the REST API to retrieve name of the variables for the selected MB
-        var=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/" & Text.From(mbId) &"/variables/selector", [
-            Headers = [
-                #"IPLSSOTOKEN" = sso[token]
-            ]]
-        ), 
+        var = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/" & Text.From(mbId) &"/variables/selector"),
         variables = Json.Document(var)[items],
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
@@ -135,42 +115,43 @@ GetVariables = (mbId as number, braincubeName as text, begin as date, end as dat
         NavTable = Table.ToNavigationTable(DataTable{List.Count(DataTable)-1}[tab], {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
         NavTable;
-        
+
 /***************************************************************************************************************
                                                 DATA RETRIEVE
 ****************************************************************************************************************/
 //Return all the values of the selected variable between te interval of time specified
-//Return a table with three columns : the values, the order (a variable, same for the variables in the same MB), and the 
+//Return a table with three columns : the values, the order (a variable, same for the variables in the same MB), and the
 //index because PowerBI does not recognize order values as a link between variables
 shared GetVariableContent = (
-    varName as text, 
+    varName as text,
     braincubeName as text,
     mbId as number,
-    varId as number, 
-    ref, 
-    begin as date, 
+    varId as number,
+    ref,
+    begin as date,
     end as date,
     sso as record
 ) as table =>
     let
         //Formats the data requested by the API to provide the response
         content= Json.FromValue(
-            [order= ref[referenceDate], 
-                definitions= {ref[referenceDate], "mb" & Text.From(mbId) & "/d" & Text.From(varId)} , 
+            [order= ref[referenceDate],
+                definitions= {ref[referenceDate], "mb" & Text.From(mbId) & "/d" & Text.From(varId)} ,
                 context=[
-                    dataSource = "mb" & Text.From(mbId), 
+                    dataSource = "mb" & Text.From(mbId),
                     filter=[BETWEEN={ref[order], Date.ToText(begin, "yyyyMMdd_hhmmss"), Date.ToText(end, "yyyyMMdd_hhmmss")}]]
-            ] 
+            ]
         ),
         //Call the REST API to get the values needed
-        var=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) &"/LF", [ 
+        var=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) &"/LF", [
             Headers = [
                 #"Accept" = "application/json",
-                #"IPLSSOTOKEN" = sso[token],
+                #"X-Api-Key" = Extension.CurrentCredential()[Key],
                 #"Content-Type" = "application/json"
             ],
-            Content = content]
-        ), 
+            Content = content,
+            ManualCredentials = true]
+        ),
         variables = Json.Document(var),
         //Formats the values to return a table usable by PowerBI
         tab = Table.FromList(variables[datadefs]{0}[data], null, {"_Order"}),
@@ -180,46 +161,32 @@ shared GetVariableContent = (
     in
         result;
 
+
 /**********************************************************************************************************************
                                                 BRAINCUBE AUTHENTIFICATION
 ***********************************************************************************************************************/
-//Implement an OAuth2 authentification, by calling the athorization page of braincube, and retrieving the token from the URL
+// Also allow Api Key access
 Braincube = [
     Authentication = [
-        OAuth = [StartLogin = StartLogin, FinishLogin = FinishLogin]
-    ], Label = "Braincube Connector"
+          Key = [KeyLabel = Extension.LoadString("ApiKeyLabel")]
+          //Anonymous = []
+    ],
+    Label = Extension.LoadString("DataSourceLabel")
 ];
 
-//Call and display the autorization page of Braincube with all the stuff needed to get the token
-StartLogin = (resourceUrl, state, display) =>
-  let
-      authorizeUrl = authorize_uri & "?" & Uri.BuildQueryString([
-            client_id = client_id,  
-            redirect_uri = redirect_uri,
-            state = state,
-            scope =scope,
-            response_type = "token"
-      ])
-  in
-    [
-      LoginUri = authorizeUrl,
-      CallbackUri = redirect_uri,
-      WindowHeight = 600,
-      WindowWidth = 800,
-      Context = null
-    ];
 
-//Retrieves the part of the URL returned by the authentication that contains the token
-//Token store in the Credential logic of PowerBI, accessible everywhere after
-FinishLogin = (context, callbackUri, state) =>
+Braincube.authenticatedGet = (_uri as text) as binary =>
     let
-        fragments=Uri.Parts(callbackUri)[Fragment],
-        frag=Text.AfterDelimiter(fragments, "access_token="),
-        token=Text.BeforeDelimiter(frag, "&"),
-        result = [access_token  = token]
+        req = Web.Contents(_uri, [
+            Headers = [
+                #"Accept" = "application/json",
+                #"X-Api-Key" = Extension.CurrentCredential()[Key],
+                #"Content-Type" = "application/json"
+            ],
+            ManualCredentials = true
+        ])
     in
-        result;
-
+        req;
 /**********************************************************************************************************************
                                                     UTILS
 **********************************************************************************************************************/
@@ -235,12 +202,12 @@ Table.ToNavigationTable = (
 ) as table =>
     let
         tableType = Value.Type(table),
-        newTableType = Type.AddTableKey(tableType, keyColumns, true) meta 
+        newTableType = Type.AddTableKey(tableType, keyColumns, true) meta
         [
-            NavigationTable.NameColumn = nameColumn, 
+            NavigationTable.NameColumn = nameColumn,
             NavigationTable.DataColumn = dataColumn,
-            NavigationTable.ItemKindColumn = itemKindColumn, 
-            Preview.DelayColumn = itemNameColumn, 
+            NavigationTable.ItemKindColumn = itemKindColumn,
+            Preview.DelayColumn = itemNameColumn,
             NavigationTable.IsLeafColumn = isLeafColumn
         ],
         navigationTable = Value.ReplaceType(table, newTableType)
@@ -248,10 +215,9 @@ Table.ToNavigationTable = (
         navigationTable;
 
 Braincube.Publish = [
-    Beta = true,
     Category = "online services",
     ButtonText = { Extension.LoadString("ButtonTitle"), Extension.LoadString("ButtonHelp") },
-    LearnMoreUrl = "https://powerbi.microsoft.com/",
+    LearnMoreUrl = "https://github.com/braincube-io/power-bi-connector",
     SourceImage = Braincube.Icons,
     SourceTypeImage = Braincube.Icons
 ];
