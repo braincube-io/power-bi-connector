@@ -56,18 +56,13 @@ There are two ways to install the connector:
 
 * **Step 2**
 
-    > Choose a time interval for your data
-    ![](img/power_bi_date_picker.png)
-
-* **Step 3**
-
     > If you have not yet set up a Braincube connection, you'll have to start one now. You have to have created an Access Token (see [below](#creating-an-access-token))
     ![](img/power_bi_auth.png)
 
-* **Step 4**
+* **Step 3**
 
-    > Select the data you want to retrieve and validate
-    ![](img/power_bi_variable.png)
+    > Select the data you want to retrieve (Braincube, Base, Sliding Period, and Variable) and validate
+    ![](img/power_bi_configuration.png)
 
 You can then use your data in Power BI Desktop as you wish.
 ![](img/power_bi_final.png)

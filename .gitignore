@@ -1,2 +1,6 @@
 Braincube/bin
 Braincube/obj
+
+.idea/
+.vs/
+UpgradeLog.htm
