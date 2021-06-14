@@ -44,6 +44,8 @@ This all starts at this page: https://docs.microsoft.com/en-us/power-query/handl
 
 ## Signing Cert 
 
+/!\ To retrieve the certificate, contact a SysAdmin and ask him to sign the certificate. The certificate is located in the admin's password stash
+
 You will first have to generate a signing certificate, if there is not one already existing (hint: it should already exist if there has been at least one public release of the Braincube connector).
 
 In any case, you should generate it like this:
