@@ -1,0 +1,10 @@
+include:
+  - project: 'braincube/misc/gitlabci-commons'
+    file:
+      - gitlab-ci-send-changelog.yml
+
+stages:
+  - deploy
+
+notification:
+  extends: .send_changelog

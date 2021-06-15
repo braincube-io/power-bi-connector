@@ -7,13 +7,34 @@ If you want to modify the connector, you'll have to install:
 
 You can then open the solution located in [Braincube.sln](Braincube.sln). You should be able to build immediately.
 
-Command line: use MsBuild
-
-```
-msbuild -property:Configuration=Release
-```
-
 Debugging it is HARD. I'll let the reader find out if he can easily. I couldn't.
+
+## For test in local
+ - You have to enable the "Uncertified connectors" in the Security Options of Power BI in Options >> Global >> Security >> Data Extensions (See chapter "Install the self signed version" in Readme.md for more detail)
+ - After your compile your code go to Braincube\bin\Debug of your source directory
+ - Copy Braincube.mez to %USERHOME%\Documents\Power BI Desktop\Custom Connectors (Create dir if it not exist)
+ - Advice: You can update the .mez without reboot PowerBi Desktop ;-)
+
+## delete the apikey
+In PowerBi the apiKey are saved like a "metadata", for delete it and api key popup of the braincube connector show it, you need to go in "Files >> Parameters >> parameters of data src"
+and delete the value saved.
+
+## Almost debug ...
+ - In the code add Diagnostics.Trace(...) , but we need to return it in variable, and you need this variable are "let" in the end of your query ...
+ - For exemple, in the end of method GetVariableContent, you can add this line tmp = Diagnostics.Trace(TraceLevel.Information, "MGI :: " & Date.ToText(endDate, "yyyy/MM/dd "), () => result, true)
+And updte the last line from "in result" to "in tmp".
+ - For see the log, you need to activate diagnostics in your PowerBi Desktop (Warning: Enable tracing option will be reset when the Power BI Desktop instance is closed. To enable tracing, the option needs to be manually set every time Power BI Desktop is opened.)
+   ![alt text](img/enable-tracing-powerbi.png)
+ - After you execute the code with your "log" , you need to go to C:\Users\User\Microsoft\Power BI Desktop Store App\Traces (Or in same windows for activate it, you have a link "go to traces directory")
+ - In this dir, you find a file "Microsoft.Mashup.Container.NetFXwithmanynumber" with your log.
+ - Advice: Flag your log with a simply code (like your trigramme), because this file contains many lines ;-)
+ - Warning: The trace works only the log contains "real" powerBi text :-(
+
+# Virtualbox configuration
+## Screen resolution
+ - In image when is launched, go to menu "périphériques", and clic on "Insérer l'image Cd des additions invités"
+ - Install all
+ - After the reboot you can up the screen resolution
 
 # Connector signage
 
@@ -22,6 +43,8 @@ This connector must be Self-signed by a developer certificate. This allows clien
 This all starts at this page: https://docs.microsoft.com/en-us/power-query/handlingconnectorsigning
 
 ## Signing Cert 
+
+/!\ To retrieve the certificate, contact a SysAdmin and ask him to sign the certificate. The certificate is located in the admin's password stash
 
 You will first have to generate a signing certificate, if there is not one already existing (hint: it should already exist if there has been at least one public release of the Braincube connector).
 

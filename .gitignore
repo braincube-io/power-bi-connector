@@ -1,2 +1,8 @@
 Braincube/bin
 Braincube/obj
+
+.idea/
+.vs/
+UpgradeLog.htm
+cert.pfx
+MakePQX_Release/
