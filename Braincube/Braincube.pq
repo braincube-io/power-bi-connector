@@ -52,7 +52,7 @@ GetMemoryBases = (braincubeName as text, sso as record, apiKey as text) as table
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
             () => [i=0, tab=#table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, {})],
-            each [i] < List.Count(memoryBases),
+            each [i] < List.Count(memoryBases)+1,
             each [
                 tab = if(memoryBases{[i]}[quickStudy] <> true) then
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
@@ -79,7 +79,7 @@ GetPeriod = (mbId as number,braincubeName as text, sso as record, apiKey as text
        DataTable = List.Generate(
                () => [i=0, tab=#table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, {})],
                each [i] <= List.Count(periodValue),
-               each [                   
+               each [
                    tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                        Name=Number.ToText([i]) & " - Last " & Number.ToText(periodValue{[i]}) & " days",
                        Key= periodValue{[i]},
@@ -107,7 +107,7 @@ GetVariables = (mbId as number, braincubeName as text, sso as record, apiKey as 
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
             () => [i=0, tab=#table({"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"}, {})],
-            each [i] < List.Count(variables),
+            each [i] < List.Count(variables)+1,
             each [
                 tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                     Name=variables{[i]}[local],
