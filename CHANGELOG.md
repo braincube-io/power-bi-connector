@@ -1,13 +1,18 @@
 # Changelog
 
-## [3.0.1]
+## [3.0.1] - 2022-05
 
 ### Fixed
 
 - [#5335](https://gitlab.ipleanware.com/braincube/misc/redmine/-/issues/5335) All memoryBase and all variables are not retrieve
   correctly.
 
-## [3.0.0]
+### Changed
+
+- Move unsigned connector in unsigned directory in releases.
+- Update `README.md` with good link.
+
+## [3.0.0] - 2021-06
 
 ### Added
 

@@ -26,7 +26,7 @@ There are two ways to install the connector:
 
   ![](img/power_bi_registry.png)
 
-- Then download the connector [here](https://github.com/braincube-io/power-bi-connector/raw/master/releases/Braincube2.0.0.pqx).
+- Then download the last version of the connector (*.pqx) [here](https://github.com/braincube-io/power-bi-connector/raw/master/releases/).
 
   And install this file into your `%USERHOME%\Documents\Power BI Desktop\Custom Connectors` folder.
 
@@ -39,7 +39,7 @@ There are two ways to install the connector:
 
 ![security screen](img/power_bi_nosigncheck.png)
 
-- Then download the unsigned connector [here](https://github.com/braincube-io/power-bi-connector/raw/master/releases/Braincube2.0.0.mez).
+- Then download the last version of the unsigned connector (*.mez) [here](https://github.com/braincube-io/power-bi-connector/raw/master/releases/unsigned/).
 
 - And install this file into your `%USERHOME%\Documents\Power BI Desktop\Custom Connectors` folder.
 
@@ -50,19 +50,19 @@ There are two ways to install the connector:
 
 * **Step 1**
 
-    > Launch the Braincube connector. You will find it in the Get Data, Other.
-    ![](img/power_bi_get_data.png)
-    ![](img/power_bi_select_connector.png)
+  > Launch the Braincube connector. You will find it in the Get Data, Other.
+  ![](img/power_bi_get_data.png)
+  ![](img/power_bi_select_connector.png)
 
 * **Step 2**
 
-    > If you have not yet set up a Braincube connection, you'll have to start one now. You have to have created an Access Token (see [below](#creating-an-access-token))
-    ![](img/power_bi_auth.png)
+  > If you have not yet set up a Braincube connection, you'll have to start one now. You have to have created an Access Token (see [below](#creating-an-access-token))
+  ![](img/power_bi_auth.png)
 
 * **Step 3**
 
-    > Select the data you want to retrieve (Braincube, Base, Sliding Period, and Variable) and validate
-    ![](img/power_bi_configuration.png)
+  > Select the data you want to retrieve (Braincube, Base, Sliding Period, and Variable) and validate
+  ![](img/power_bi_configuration.png)
 
 You can then use your data in Power BI Desktop as you wish.
 ![](img/power_bi_final.png)
@@ -84,16 +84,3 @@ The process is simple:
   ![](img/pat.png)
 
 **Be careful, the key will only be displayed once! Copy it somewhere safe**
-## Issue
-
-| Version | Description | Solution | Date
-|----|----|----|----
-| 1.0.0 | Access forbidden when you try to get a variable![](img/power_bi_access_forbidden.png) | Cancel the connection and refresh the variable![](img/power_bi_refresh.png) | 14/05/2018
-
-
-## Release History
-
-- **March 2021**: Version 2.0.0 using ApiKey connection
-- **June 2018**: Version 1.0.0 using Oauth connection
-
-Version 1.0.0 is still available [here](https://github.com/Gui13/power-bi-connector/raw/master/releases/Braincube1.0.0.mez).
