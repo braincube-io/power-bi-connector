@@ -1,19 +1,27 @@
 ﻿section Braincube;
 
 /********************** APIKEY AUTH CONSTANTS *************************/
-me_uri = "https://mybraincube.com/sso-server/ws/user/me";
+// Domain parameter will be injected by Braincube.Contents
+// Default domain is mybraincube.com
 
 //Function executed as a main, called after the authentification
 //Call the GetBraincube after displaying the date picker to choose parameters
 [DataSource.Kind="Braincube", Publish="Braincube.Publish"]
-shared Braincube.Contents = () => GetBraincubes();
+shared Braincube.Contents = (BraincubeDomain as text) =>
+    let
+        effective_domain = if BraincubeDomain = "" then "mybraincube.com" else BraincubeDomain
+    in
+        GetBraincubes(effective_domain);
 
 /**********************************************************************************************************
                                             DATA SELECTION
 ***********************************************************************************************************/
 //Return a Navigation Table with all the braincubes availablesfor this client, without the MX
-GetBraincubes = () as table =>
+GetBraincubes = (domain as text) as table =>
     let
+        //Use default domain if none provided
+        effective_domain = if domain = "" or domain = null or domain = "mybraincube.com" then "mybraincube.com" else domain,
+        me_uri = "https://" & effective_domain & "/sso-server/ws/user/me",
         //retrieve a session with the API Key
         apiKey = Extension.CurrentCredential()[Key],
         ssosession = Braincube.authenticatedGet(me_uri, apiKey),
@@ -27,7 +35,7 @@ GetBraincubes = () as table =>
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
                         Name=sso[accessList]{[i]}[product][name],
                         Key=sso[accessList]{[i]}[product][productId],
-                        Data=GetMemoryBases(sso[accessList]{[i]}[product][name], sso, apiKey),
+                        Data=GetMemoryBases(sso[accessList]{[i]}[product][name], effective_domain, sso, apiKey),
                         ItemKind= "Cube",
                         ItemName= "Cube",
                         IsLeaf= false]}
@@ -44,10 +52,11 @@ GetBraincubes = () as table =>
 
 
 //Return a Navigation Table with all the memoryBases available for the selected braincube
-GetMemoryBases = (braincubeName as text, sso as record, apiKey as text) as table =>
+GetMemoryBases = (braincubeName as text, domain as text, sso as record, apiKey as text) as table =>
     let
         //Call the REST API to retrieve MB infos for the selected braincube
-        mb = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/all/selector", apiKey),
+        api_base = "https://api." & domain & "/braincube/",
+        mb = Braincube.authenticatedGet(api_base & braincubeName & "/braincube/mb/all/selector", apiKey),
         memoryBases = Json.Document(mb)[items],
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
@@ -58,7 +67,7 @@ GetMemoryBases = (braincubeName as text, sso as record, apiKey as text) as table
                     Table.InsertRows([tab], Table.RowCount([tab]), {[
                         Name=memoryBases{[i]}[name] & " - " & Text.From(memoryBases{[i]}[numberOfVariables]) & " variables",
                         Key=  memoryBases{[i]}[bcId],
-                        Data= GetPeriod(memoryBases{[i]}[bcId],braincubeName, sso, apiKey),
+                        Data= GetPeriod(memoryBases{[i]}[bcId],braincubeName, domain, sso, apiKey),
                         ItemKind= "Database",
                         ItemName= "Database",
                         IsLeaf= false]}
@@ -73,7 +82,7 @@ GetMemoryBases = (braincubeName as text, sso as record, apiKey as text) as table
        NavTable;
 
 // Manage period selector
-GetPeriod = (mbId as number,braincubeName as text, sso as record, apiKey as text) as table =>
+GetPeriod = (mbId as number,braincubeName as text, domain as text, sso as record, apiKey as text) as table =>
     let
        periodValue = {2,7,14,30,60,90,120,180,360},
        DataTable = List.Generate(
@@ -83,7 +92,7 @@ GetPeriod = (mbId as number,braincubeName as text, sso as record, apiKey as text
                    tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                        Name=Number.ToText([i]) & " - Last " & Number.ToText(periodValue{[i]}) & " days",
                        Key= periodValue{[i]},
-                       Data= GetVariables(mbId, braincubeName, sso, apiKey, periodValue{[i]}),
+                       Data= GetVariables(mbId, braincubeName, domain, sso, apiKey, periodValue{[i]}),
                        ItemKind= "CubeView",
                        ItemName= "CubeView",
                        IsLeaf= false]}
@@ -96,13 +105,14 @@ GetPeriod = (mbId as number,braincubeName as text, sso as record, apiKey as text
             NavTable;
 
 //Return the variables availables for the selected memorybase
-GetVariables = (mbId as number, braincubeName as text, sso as record, apiKey as text, periodValue as number) as table =>
+GetVariables = (mbId as number, braincubeName as text, domain as text, sso as record, apiKey as text, periodValue as number) as table =>
     let
         //Call the REST API to retrieve usefull infos about the MB
-        ref = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/simple", apiKey),
+        api_base = "https://api." & domain & "/braincube/",
+        ref = Braincube.authenticatedGet(api_base &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/simple", apiKey),
         reference = Json.Document(ref),
         //Call the REST API to retrieve name of the variables for the selected MB
-        var = Braincube.authenticatedGet("https://api.mybraincube.com/braincube/" &  braincubeName & "/braincube/mb/" & Text.From(mbId) &"/variables/selector", apiKey),
+        var = Braincube.authenticatedGet(api_base &  braincubeName & "/braincube/mb/" & Text.From(mbId) &"/variables/selector", apiKey),
         variables = Json.Document(var)[items],
         //Generate the Navigation Table with the values
         DataTable = List.Generate(
@@ -112,7 +122,7 @@ GetVariables = (mbId as number, braincubeName as text, sso as record, apiKey as 
                 tab = Table.InsertRows([tab], Table.RowCount([tab]), {[
                     Name=variables{[i]}[local],
                     Key=variables{[i]}[id],
-                    Data= GetVariableContent(variables{[i]}[local], braincubeName, mbId, variables{[i]}[id], reference, sso, apiKey, periodValue),
+                    Data= GetVariableContent(variables{[i]}[local], braincubeName, domain, mbId, variables{[i]}[id], reference, sso, apiKey, periodValue),
                     ItemKind= "Record",
                     ItemName= "Record",
                     IsLeaf= true]}
@@ -132,7 +142,7 @@ GetVariables = (mbId as number, braincubeName as text, sso as record, apiKey as 
 //Return a table with three columns : the values, the order (a variable, same for the variables in the same MB), and the
 //index because PowerBI does not recognize order values as a link between variables
 shared GetVariableContent = (
-    varName as text, braincubeName as text, mbId as number, varId as number, ref, sso as record, apiKey as text, periodValue as number
+    varName as text, braincubeName as text, domain as text, mbId as number, varId as number, ref, sso as record, apiKey as text, periodValue as number
 ) as table =>
     let
         endDate = DateTime.Date(DateTime.LocalNow()),
@@ -147,7 +157,8 @@ shared GetVariableContent = (
             ]
         ),
         //Call the REST API to get the values needed
-        var=Web.Contents("https://api.mybraincube.com/braincube/" &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/LF", [
+        api_base = "https://api." & domain & "/braincube/",
+        var=Web.Contents(api_base &  braincubeName & "/braindata/mb" & Text.From(mbId) & "/LF", [
             Headers = [
                 #"Accept" = "application/json",
                 #"X-Api-Key" = apiKey,
