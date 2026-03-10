@@ -3,6 +3,8 @@ Braincube/obj
 
 .idea/
 .vs/
+tools/
 UpgradeLog.htm
 cert.pfx
+certificate.pfx
 MakePQX_Release/

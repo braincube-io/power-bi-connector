@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.1.0] - 2026-03-10
+
+### Changed
+
+- [#10](https://gitlab.ipleanware.com/braincube/apps/connector-out/power-bi-connector/-/issues/10) Add Braincube domain selection, update documentation
+
+## [3.0.2] - 2023-10
+
+### Changed
+
+- [#4](https://gitlab.ipleanware.com/braincube/apps/connector-out/power-bi-connector/-/issues/4) [PERF] Optimize mb table construction
+
 ## [3.0.1] - 2022-05
 
 ### Fixed

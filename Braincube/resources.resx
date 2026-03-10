@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="ApiKeyLabel" xml:space="preserve">
-    <value>Braincube Api Key -- Create your key in your account on https://mybraincube.com</value>
+    <value>Braincube Api Key -- Create your key in your account on https://your-domain.mybraincube.com</value>
   </data>
   <data name="ApiKeyTitle" xml:space="preserve">
     <value>Braincube</value>
@@ -131,5 +131,11 @@
   </data>
   <data name="DataSourceLabel" xml:space="preserve">
     <value>Braincube</value>
+  </data>
+  <data name="DomainLabel" xml:space="preserve">
+    <value>mybraincube.com</value>
+  </data>
+  <data name="DialogTitle" xml:space="preserve">
+    <value>Braincube Configuration</value>
   </data>
 </root>
